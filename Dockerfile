@@ -16,8 +16,7 @@ RUN npm install
 COPY assets /app/assets
 RUN npm run build
 
-FROM alpine:3.7
-WORKDIR /
+FROM alpine
 COPY --from=go_builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=go_builder /go/src/app/app /app
 COPY templates /templates

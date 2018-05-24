@@ -29,7 +29,7 @@ func NewConfigFromEnv() Config {
 }
 
 func formatTemplate(w http.ResponseWriter, templateName string, data interface{}) error {
-	pageTemplate, err := template.ParseFiles(fmt.Sprintf("templates/%s", templateName))
+	pageTemplate, err := template.ParseFiles(fmt.Sprintf("templates/%s.html", templateName))
 	if err != nil {
 		return err
 	}
