@@ -188,6 +188,12 @@ func main() {
 				return
 			}
 
+			channelData.AverageWords, err = retrieveAverageWords(db, channelData.Id)
+			if err != nil {
+				handleError(err)
+				return
+			}
+
 			err = formatTemplate(w, "statistics", channelData)
 			if err != nil {
 				handleError(err)
@@ -272,6 +278,23 @@ func retrieveTotalWords(db *sql.DB, channel int) ([]TotalEntry, error) {
 		}
 		info.Previous = previous
 		previous = info.Name
+		data = append(data, info)
+	}
+	return data, nil
+}
+
+func retrieveAverageWords(db *sql.DB, channel int) ([]FloatEntry, error) {
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.words FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, AVG(messages.words) as words FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY words DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2", channel, 2)
+	if err != nil {
+		return nil, err
+	}
+	var data []FloatEntry
+	for result.Next() {
+		var info FloatEntry
+		err := result.Scan(&info.Name, &info.Value)
+		if err != nil {
+			panic(err)
+		}
 		data = append(data, info)
 	}
 	return data, nil
