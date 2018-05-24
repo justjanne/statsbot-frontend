@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 )
 
 type Config struct {
@@ -57,23 +58,30 @@ func main() {
 		panic(err)
 	}
 
+	assets := http.FileServer(http.Dir("assets"))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, channel := path.Split(r.URL.Path)
-		channelData := ChannelData{}
-		err = db.QueryRow("SELECT id, channel FROM channels WHERE channel ILIKE $1", channel).Scan(&channelData.Id, &channelData.Name)
-		if err != nil {
-			println(err.Error())
-			return
-		}
-		err = db.QueryRow("SELECT SUM(characters), SUM(words) FROM messages WHERE channel = $1", channelData.Id).Scan(&channelData.TotalCharacters, &channelData.TotalWords)
-		if err != nil {
-			println(err.Error())
-			return
-		}
-		err = formatTemplate(w, "statistics", channelData)
-		if err != nil {
-			println(err.Error())
-			return
+		if strings.HasPrefix(channel, "#") {
+			channelData := ChannelData{}
+			err = db.QueryRow("SELECT id, channel FROM channels WHERE channel ILIKE $1", channel).Scan(&channelData.Id, &channelData.Name)
+			if err != nil {
+				println(err.Error())
+				return
+			}
+			err = db.QueryRow("SELECT SUM(characters), SUM(words) FROM messages WHERE channel = $1", channelData.Id).Scan(&channelData.TotalCharacters, &channelData.TotalWords)
+			if err != nil {
+				println(err.Error())
+				return
+			}
+			err = formatTemplate(w, "statistics", channelData)
+			if err != nil {
+				println(err.Error())
+				return
+			}
+		} else {
+			w.Header().Set("Vary", "Accept-Encoding")
+			w.Header().Set("Cache-Control", "public, max-age=31536000")
+			assets.ServeHTTP(w, r)
 		}
 	})
 
