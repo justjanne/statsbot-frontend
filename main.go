@@ -57,10 +57,6 @@ func main() {
 		panic(err)
 	}
 
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
-	})
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, channel := path.Split(r.URL.Path)
 		channelData := ChannelData{}
@@ -68,4 +64,13 @@ func main() {
 		db.QueryRow("SELECT SUM(characters), SUM(words) FROM messages WHERE channel = $1").Scan(&channelData.TotalCharacters, &channelData.TotalWords)
 		formatTemplate(w, "statistics", channelData)
 	})
+
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("OK"))
+	})
+
+	err = http.ListenAndServe(":8080", nil)
+	if err != nil {
+		panic(err)
+	}
 }
