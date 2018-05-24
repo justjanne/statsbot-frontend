@@ -55,12 +55,13 @@
     <tbody>
     {{with index .Questions 0}}
     <tr>
-        <td>Is <b>{{.Name}}</b> stupid or just asking too many questions? {{.Value}}% lines contained a question!</td>
+        <td>Is <b>{{.Name}}</b> stupid or just asking too many questions? {{.Value}}% of lines contained a question!
+        </td>
     </tr>
     {{end}}
     {{with index .Questions 1}}
     <tr>
-        <td><b>{{.Name}}</b> didn't know that much either. {{.Value}}% of his/her lines were questions.</td>
+        <td><b>{{.Name}}</b> didn't know that much either. {{.Value}}% of their lines were questions.</td>
     </tr>
     {{end}}
     </tbody>
@@ -79,13 +80,12 @@
     <tbody>
     {{with index .Caps 0}}
     <tr>
-        <td>It seems that <b>{{.Name}}</b>'s shift-key is hanging: {{.Value}}of the time he/she wrote UPPERCASE.</td>
+        <td>It seems that <b>{{.Name}}</b>'s shift-key is hanging: {{.Value}}% of the time they wrote UPPERCASE.</td>
     </tr>
     {{end}}
     {{with index .Caps 1}}
     <tr>
-        <td><b>{{.Name}}</b> just forgot to deactivate his/her Caps-Lock. He/She wrote UPPERCASE {{.Value}}% of the
-            time.
+        <td><b>{{.Name}}</b> just forgot to deactivate their Caps-Lock. They wrote UPPERCASE {{.Value}}% of the time.
         </td>
     </tr>
     {{end}}
