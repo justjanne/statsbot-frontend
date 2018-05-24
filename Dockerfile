@@ -15,8 +15,7 @@ RUN npm install
 COPY assets /app/assets
 RUN npm run build
 
-ENTRYPOINT ["/app"]
-FROM scratch
+FROM alpine
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /go/src/app/app /app
 COPY templates /templates
