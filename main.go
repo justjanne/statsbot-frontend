@@ -2,16 +2,16 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	_ "github.com/lib/pq"
-	"gopkg.in/redis.v4"
 	"html/template"
 	"net/http"
 	"os"
 	"path"
 	"strings"
 	"time"
+	"github.com/go-redis/redis"
+	"encoding/json"
 )
 
 const DEBUG = false
@@ -64,6 +64,7 @@ type ChannelData struct {
 	Words             int
 	WordsPerLine      float64
 	CharactersPerLine float64
+	HourUsage         []float64
 	Users             []UserData
 	Questions         []FloatEntry
 	Exclamations      []FloatEntry
@@ -118,7 +119,8 @@ func handleError(err error) {
 func main() {
 	config := NewConfigFromEnv()
 
-	redisClient := redis.NewClient(&redis.Options{
+	var redisClient *redis.Client
+	redisClient = redis.NewClient(&redis.Options{
 		Addr:     config.Redis.Address,
 		Password: config.Redis.Password,
 	})
@@ -177,6 +179,11 @@ func buildChannelData(db *sql.DB, channel string) (channelData ChannelData, err 
 	}
 
 	err = db.QueryRow("SELECT COUNT(*), SUM(words), AVG(words), AVG(characters) FROM messages WHERE channel = $1", channelData.Id).Scan(&channelData.Lines, &channelData.Words, &channelData.WordsPerLine, &channelData.CharactersPerLine)
+	if err != nil {
+		return
+	}
+
+	channelData.HourUsage, err = retrieveHourUsage(db, channelData.Id)
 	if err != nil {
 		return
 	}
@@ -254,6 +261,31 @@ func retrievePercentageStats(db *sql.DB, channel int, stats string) ([]FloatEntr
 		data = append(data, info)
 	}
 	return data, nil
+}
+
+func retrieveHourUsage(db *sql.DB, channel int) ([]float64, error) {
+	result, err := db.Query("SELECT coalesce(count, 0) AS count FROM generate_series(0, 23, 1) AS series LEFT OUTER JOIN (SELECT EXTRACT(HOUR FROM time) as hour, count(*) as count FROM messages WHERE channel = $1 GROUP BY hour) results ON (series = results.hour)", channel)
+	if err != nil {
+		return nil, err
+	}
+	var data []int
+	max := 0
+	for result.Next() {
+		var info int
+		err := result.Scan(&info)
+		if err != nil {
+			panic(err)
+		}
+		if info > max {
+			max = info
+		}
+		data = append(data, info)
+	}
+	var normalizedResult []float64
+	for _, element := range data {
+		normalizedResult = append(normalizedResult, float64(element)/float64(max)*100.0)
+	}
+	return normalizedResult, nil
 }
 
 func retrieveLongestLines(db *sql.DB, channel int) ([]FloatEntry, error) {

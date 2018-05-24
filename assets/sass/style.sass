@@ -11,9 +11,11 @@ table
   width: 100%
   border-collapse: collapse
   margin: 1rem 0
-  th
-    background: rgba(52, 68, 84, 1.0)
+  tr th
+    background: rgba(52, 68, 84, 0.7)
     color: #ffffff
+  thead tr:first-child th
+    background: rgba(52, 68, 84, 1.0)
   tr
     background: rgba(52, 68, 84, 0.2)
     font-size: 13px
@@ -28,3 +30,10 @@ table
         font-size: 10px
       &:nth-child(2n)
         background: rgba(52, 68, 84, 0.1)
+  &.activity
+    .chart
+      td
+        width: 4.16666666%
+        div
+          margin-top: 1rem
+          background: rgba(52, 68, 84, 0.4)
