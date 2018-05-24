@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const DEBUG = true
+const DEBUG = false
 
 type Config struct {
 	Database DatabaseConfig
@@ -139,6 +139,7 @@ func main() {
 			}
 
 			if err != nil {
+				handleError(err)
 				channelData, err = buildChannelData(db, channel)
 				if err != nil {
 					handleError(err)
