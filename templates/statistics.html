@@ -53,84 +53,94 @@
     </tr>
     </thead>
     <tbody>
-    {{with index .Questions 0}}
+    {{range $i, $e := .Questions}}
+    {{with $e}}
     <tr>
+    {{if eq $i 0}}
         <td>Is <b>{{.Name}}</b> stupid or just asking too many questions? {{.Value}}% of lines contained a question!
         </td>
-    </tr>
-    {{end}}
-    {{with index .Questions 1}}
-    <tr>
+    {{ else }}
         <td><b>{{.Name}}</b> didn't know that much either. {{.Value}}% of their lines were questions.</td>
+    {{end}}
     </tr>
+    {{end}}
     {{end}}
     </tbody>
     <tbody>
-    {{with index .Exclamations 0}}
+    {{range $i, $e := .Exclamations}}
+    {{with $e}}
     <tr>
+    {{if eq $i 0}}
         <td>The loudest one was <b>{{.Name}}</b>, who yelled {{.Value}}% of the time!</td>
+    {{ else }}
+        <td>Another <i>old yeller</i> was <b>{{.Name}}</b>, who shouted {{.Value}}% of the time!</td>
+    {{end}}
     </tr>
     {{end}}
-    {{with index .Exclamations 1}}
-    <tr>
-        <td>Another <i>old yeller</i> was <b>{{.Name}}</b>, who shouted {{.Value}}% of the time!</td>
-    </tr>
     {{end}}
     </tbody>
     <tbody>
-    {{with index .Caps 0}}
+    {{range $i, $e := .Caps}}
+    {{with $e}}
     <tr>
+    {{if eq $i 0}}
         <td>It seems that <b>{{.Name}}</b>'s shift-key is hanging: {{.Value}}% of the time they wrote UPPERCASE.</td>
-    </tr>
-    {{end}}
-    {{with index .Caps 1}}
-    <tr>
+    {{ else }}
         <td><b>{{.Name}}</b> just forgot to deactivate their Caps-Lock. They wrote UPPERCASE {{.Value}}% of the time.
         </td>
+    {{end}}
     </tr>
+    {{end}}
     {{end}}
     </tbody>
     <tbody>
-    {{with index .EmojiHappy 0}}
+    {{range $i, $e := .EmojiHappy}}
+    {{with $e}}
     <tr>
+    {{if eq $i 0}}
         <td><b>{{.Name}}</b> brings happiness to the world. {{.Value}}% lines contained smiling faces. :)</td>
-    </tr>
-    {{end}}
-    {{with index .EmojiHappy 1}}
-    <tr>
+    {{ else }}
         <td><b>{{.Name}}</b> isn't a sad person either, smiling {{.Value}}% of the time.</td>
+    {{end}}
     </tr>
+    {{end}}
     {{end}}
     </tbody>
     <tbody>
-    {{with index .EmojiSad 0}}
+    {{range $i, $e := .EmojiSad}}
+    {{with $e}}
     <tr>
+    {{if eq $i 0}}
         <td><b>{{.Name}}</b> seems to be sad at the moment: {{.Value}}% lines contained sad faces. :(</td>
-    </tr>
-    {{end}}
-    {{with index .EmojiSad 1}}
-    <tr>
+    {{ else }}
         <td><b>{{.Name}}</b> is also a sad person, crying {{.Value}}% of the time.</td>
+    {{end}}
     </tr>
+    {{end}}
     {{end}}
     </tbody>
     <tbody>
-    {{with index .LongestLines 0}}
+    {{range $i, $e := .LongestLines}}
+    {{with $e}}
     <tr>
+    {{if eq $i 0}}
         <td><b>{{.Name}}</b> wrote the longest lines, averaging {{printf "%.1f" .Value}} letters per line.</td>
+    {{end}}
     </tr>
+    {{end}}
     {{end}}
     </tbody>
     <tbody>
-    {{with index .ShortestLines 0}}
+    {{range $i, $e := .ShortestLines}}
+    {{with $e}}
     <tr>
+    {{if eq $i 0}}
         <td><b>{{.Name}}</b> wrote the shortest lines, averaging {{printf "%.1f" .Value}} characters per line.</td>
+    {{ else }}
+        <td><b>{{.Name}}</b> was tight-lipped, too, averaging {{printf "%.1f" .Value}} characters.</td>
+    {{end}}
     </tr>
     {{end}}
-    {{with index .ShortestLines 1}}
-    <tr>
-        <td><b>{{.Name}}</b> was tight-lipped, too, averaging {{printf "%.1f" .Value}} characters.</td>
-    </tr>
     {{end}}
     </tbody>
 </table>
