@@ -135,7 +135,7 @@ func main() {
 			var channelData ChannelData
 			data, err := redisClient.Get(channel).Bytes()
 			if err == nil {
-				err = json.Unmarshal(data, channelData)
+				err = json.Unmarshal(data, &channelData)
 			}
 
 			if err != nil {
