@@ -139,7 +139,6 @@ func main() {
 			}
 
 			if err != nil {
-				handleError(err)
 				channelData, err = buildChannelData(db, channel)
 				if err != nil {
 					handleError(err)
@@ -172,8 +171,6 @@ func main() {
 }
 
 func buildChannelData(db *sql.DB, channel string) (channelData ChannelData, err error) {
-	fmt.Printf("Recomputing channel data for %s\n", channel)
-
 	err = db.QueryRow("SELECT id, channel FROM channels WHERE channel ILIKE $1", channel).Scan(&channelData.Id, &channelData.Name)
 	if err != nil {
 		return
