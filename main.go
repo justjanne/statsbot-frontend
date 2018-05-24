@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
-	"os"
-	"net/http"
 	"html/template"
+	"net/http"
+	"os"
 	"path"
 )
 
@@ -20,7 +20,6 @@ type DatabaseConfig struct {
 }
 
 func NewConfigFromEnv() Config {
-	var err error
 	config := Config{}
 
 	config.Database.Format = os.Getenv("KSTATS_DATABASE_TYPE")
