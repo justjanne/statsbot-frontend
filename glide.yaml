@@ -1,0 +1,3 @@
+package: git.kuschku.de/justjanne/statsbot
+import:
+- package: github.com/lib/pq
