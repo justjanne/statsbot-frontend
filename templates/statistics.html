@@ -90,4 +90,47 @@
     </tr>
     {{end}}
     </tbody>
+    <tbody>
+    {{with index .EmojiHappy 0}}
+    <tr>
+        <td><b>{{.Name}}</b> brings happiness to the world. {{.Value}}% lines contained smiling faces. :)</td>
+    </tr>
+    {{end}}
+    {{with index .EmojiHappy 1}}
+    <tr>
+        <td><b>{{.Name}}</b> isn't a sad person either, smiling {{.Value}}% of the time.</td>
+    </tr>
+    {{end}}
+    </tbody>
+    <tbody>
+    {{with index .EmojiSad 0}}
+    <tr>
+        <td><b>{{.Name}}</b> seems to be sad at the moment: {{.Value}}% lines contained sad faces. :(</td>
+    </tr>
+    {{end}}
+    {{with index .EmojiSad 1}}
+    <tr>
+        <td><b>{{.Name}}</b> is also a sad person, crying {{.Value}}% of the time.</td>
+    </tr>
+    {{end}}
+    </tbody>
+    <tbody>
+    {{with index .LongestLines 0}}
+    <tr>
+        <td><b>{{.Name}}</b> wrote the longest lines, averaging {{printf "%.1f" .Value}} letters per line.</td>
+    </tr>
+    {{end}}
+    </tbody>
+    <tbody>
+    {{with index .ShortestLines 0}}
+    <tr>
+        <td><b>{{.Name}}</b> wrote the shortest lines, averaging {{printf "%.1f" .Value}} characters per line.</td>
+    </tr>
+    {{end}}
+    {{with index .ShortestLines 1}}
+    <tr>
+        <td><b>{{.Name}}</b> was tight-lipped, too, averaging {{printf "%.1f" .Value}} characters.</td>
+    </tr>
+    {{end}}
+    </tbody>
 </table>

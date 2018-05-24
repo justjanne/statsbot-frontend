@@ -50,24 +50,23 @@ type ChannelData struct {
 	TotalWords      int
 	TotalCharacters int
 	Users           []UserData
-	Questions       []PercentageEntry
-	Exclamations    []PercentageEntry
-	Caps            []PercentageEntry
-	EmojiHappy      []PercentageEntry
-	EmojiSad        []PercentageEntry
-	LongestLines    []TotalEntry
-	ShortestLines   []TotalEntry
-	Total           []TotalEntry
-	Average         TotalEntry
-	ChannelAverage  TotalEntry
+	Questions       []FloatEntry
+	Exclamations    []FloatEntry
+	Caps            []FloatEntry
+	EmojiHappy      []FloatEntry
+	EmojiSad        []FloatEntry
+	LongestLines    []FloatEntry
+	ShortestLines   []FloatEntry
+	Total           []IntEntry
+	Average         float64
 }
 
-type PercentageEntry struct {
+type FloatEntry struct {
 	Name  string
 	Value float64
 }
 
-type TotalEntry struct {
+type IntEntry struct {
 	Name  string
 	Value int
 }
@@ -134,6 +133,30 @@ func main() {
 				return
 			}
 
+			channelData.EmojiHappy, err = retrievePercentageStats(db, "emoji_happy")
+			if err != nil {
+				println(err.Error())
+				return
+			}
+
+			channelData.EmojiSad, err = retrievePercentageStats(db, "emoji_sad")
+			if err != nil {
+				println(err.Error())
+				return
+			}
+
+			channelData.LongestLines, err = retrieveLongestLines(db)
+			if err != nil {
+				println(err.Error())
+				return
+			}
+
+			channelData.ShortestLines, err = retrieveShortestLines(db)
+			if err != nil {
+				println(err.Error())
+				return
+			}
+
 			err = formatTemplate(w, "statistics", channelData)
 			if err != nil {
 				println(err.Error())
@@ -156,14 +179,48 @@ func main() {
 	}
 }
 
-func retrievePercentageStats(db *sql.DB, stats string) ([]PercentageEntry, error) {
-	var data []PercentageEntry
+func retrievePercentageStats(db *sql.DB, stats string) ([]FloatEntry, error) {
+	var data []FloatEntry
 	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t." + stats + " FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, round((count(nullif(messages." + stats + ", false)) * 100) :: numeric / count(*)) as " + stats + " FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = 1 WHERE messages.channel = 1 GROUP BY hash ORDER BY " + stats + " DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT 2;")
 	if err != nil {
 		return nil, err
 	}
 	for result.Next() {
-		var info PercentageEntry
+		var info FloatEntry
+		err := result.Scan(&info.Name, &info.Value)
+		if err != nil {
+			panic(err)
+		}
+		data = append(data, info)
+	}
+	return data, nil
+}
+
+func retrieveLongestLines(db *sql.DB) ([]FloatEntry, error) {
+	var data []FloatEntry
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = 1 WHERE messages.channel = 1 GROUP BY hash ORDER BY average DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT 2;")
+	if err != nil {
+		return nil, err
+	}
+	for result.Next() {
+		var info FloatEntry
+		err := result.Scan(&info.Name, &info.Value)
+		if err != nil {
+			panic(err)
+		}
+		data = append(data, info)
+	}
+	return data, nil
+}
+
+func retrieveShortestLines(db *sql.DB) ([]FloatEntry, error) {
+	var data []FloatEntry
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = 1 WHERE messages.channel = 1 GROUP BY hash ORDER BY average DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT 2;")
+	if err != nil {
+		return nil, err
+	}
+	for result.Next() {
+		var info FloatEntry
 		err := result.Scan(&info.Name, &info.Value)
 		if err != nil {
 			panic(err)
