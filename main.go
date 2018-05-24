@@ -111,7 +111,7 @@ func handleError(err error) {
 	if DEBUG {
 		panic(err)
 	} else {
-		handleError(err)
+		println(err.Error())
 	}
 }
 
