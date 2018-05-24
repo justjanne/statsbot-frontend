@@ -47,8 +47,9 @@ func formatTemplate(w http.ResponseWriter, templateName string, data interface{}
 type ChannelData struct {
 	Id              int
 	Name            string
-	TotalWords      int
 	TotalCharacters int
+	TotalWords      int
+	TotalLines      int
 	Users           []UserData
 	Questions       []FloatEntry
 	Exclamations    []FloatEntry
@@ -75,6 +76,7 @@ type UserData struct {
 	Name     string
 	Total    int
 	Words    int
+	Lines    int
 	LastSeen time.Time
 }
 
@@ -96,19 +98,19 @@ func main() {
 				println(err.Error())
 				return
 			}
-			err = db.QueryRow("SELECT SUM(characters), SUM(words) FROM messages WHERE channel = $1", channelData.Id).Scan(&channelData.TotalCharacters, &channelData.TotalWords)
+			err = db.QueryRow("SELECT COUNT(*), SUM(characters), SUM(words) FROM messages WHERE channel = $1", channelData.Id).Scan(&channelData.TotalLines, &channelData.TotalCharacters, &channelData.TotalWords)
 			if err != nil {
 				println(err.Error())
 				return
 			}
-			result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.characters, t.words, t.lastSeen FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, SUM(messages.characters) as characters, SUM(messages.words) as words, MAX(messages.time) AS lastSeen FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = 1 WHERE messages.channel = 1 GROUP BY hash ORDER BY characters DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT 20")
+			result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.characters, t.words, t.lines, t.lastSeen FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, SUM(messages.characters) as characters, SUM(messages.words) as words, COUNT(*) as lines, MAX(messages.time) AS lastSeen FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = 1 WHERE messages.channel = 1 GROUP BY hash ORDER BY characters DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT 20")
 			if err != nil {
 				println(err.Error())
 				return
 			}
 			for result.Next() {
 				var info UserData
-				err := result.Scan(&info.Name, &info.Total, &info.Words, &info.LastSeen)
+				err := result.Scan(&info.Name, &info.Total, &info.Words, &info.Lines, &info.LastSeen)
 				if err != nil {
 					panic(err)
 				}

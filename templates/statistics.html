@@ -20,7 +20,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="#FFC107">
 
 <link href="/assets/css/style.css" rel="stylesheet">
-<p>Total: {{.TotalCharacters}} Characters, {{.TotalWords}} Words</p>
+<p>Total: {{.TotalCharacters}} Characters, {{.TotalWords}} Words, {{.TotalLines}} Lines</p>
 
 <table>
     <thead>
@@ -29,8 +29,9 @@
     </tr>
     <tr>
         <th>Nick</th>
-        <th>Number of lines</th>
+        <th>Number of Characters</th>
         <th>Number of Words</th>
+        <th>Number of Lines</th>
         <th>Last seen</th>
     </tr>
     </thead>
@@ -40,6 +41,7 @@
         <td>{{.Name}}</td>
         <td>{{.Total}}</td>
         <td>{{.Words}}</td>
+        <td>{{.Lines}}</td>
         <td>{{.LastSeen.Format "2006-01-02"}}</td>
     </tr>
     {{end}}
