@@ -23,11 +23,71 @@
 <p>Total: {{.TotalCharacters}} Characters, {{.TotalWords}} Words</p>
 
 <table>
-{{range .Users}}
+    <thead>
+    <tr>
+        <th colspan="3">Most active nicks</th>
+    </tr>
+    <tr>
+        <th>Nick</th>
+        <th>Number of lines</th>
+        <th>Number of Words</th>
+        <th>Last seen</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{range .Users}}
     <tr>
         <td>{{.Name}}</td>
         <td>{{.Total}}</td>
         <td>{{.Words}}</td>
+        <td>{{.LastSeen.Format "2006-01-02"}}</td>
     </tr>
-{{end}}
+    {{end}}
+    </tbody>
+</table>
+
+<table>
+    <thead>
+    <tr>
+        <th>Big numbers</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{with index .Questions 0}}
+    <tr>
+        <td>Is <b>{{.Name}}</b> stupid or just asking too many questions? {{.Value}}% lines contained a question!</td>
+    </tr>
+    {{end}}
+    {{with index .Questions 1}}
+    <tr>
+        <td><b>{{.Name}}</b> didn't know that much either. {{.Value}}% of his/her lines were questions.</td>
+    </tr>
+    {{end}}
+    </tbody>
+    <tbody>
+    {{with index .Exclamations 0}}
+    <tr>
+        <td>The loudest one was <b>{{.Name}}</b>, who yelled {{.Value}}% of the time!</td>
+    </tr>
+    {{end}}
+    {{with index .Exclamations 1}}
+    <tr>
+        <td>Another <i>old yeller</i> was <b>{{.Name}}</b>, who shouted {{.Value}}% of the time!</td>
+    </tr>
+    {{end}}
+    </tbody>
+    <tbody>
+    {{with index .Caps 0}}
+    <tr>
+        <td>It seems that <b>{{.Name}}</b>'s shift-key is hanging: {{.Value}}of the time he/she wrote UPPERCASE.</td>
+    </tr>
+    {{end}}
+    {{with index .Caps 1}}
+    <tr>
+        <td><b>{{.Name}}</b> just forgot to deactivate his/her Caps-Lock. He/She wrote UPPERCASE {{.Value}}% of the
+            time.
+        </td>
+    </tr>
+    {{end}}
+    </tbody>
 </table>
