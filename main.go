@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	_ "github.com/lib/pq"
+	"gopkg.in/redis.v4"
 	"html/template"
 	"net/http"
 	"os"
@@ -16,6 +18,7 @@ const DEBUG = true
 
 type Config struct {
 	Database DatabaseConfig
+	Redis    RedisConfig
 }
 
 type DatabaseConfig struct {
@@ -23,11 +26,19 @@ type DatabaseConfig struct {
 	Url    string
 }
 
+type RedisConfig struct {
+	Address  string
+	Password string
+}
+
 func NewConfigFromEnv() Config {
 	config := Config{}
 
 	config.Database.Format = os.Getenv("KSTATS_DATABASE_TYPE")
 	config.Database.Url = os.Getenv("KSTATS_DATABASE_URL")
+
+	config.Redis.Address = os.Getenv("KSTATS_REDIS_ADDRESS")
+	config.Redis.Password = os.Getenv("KSTATS_REDIS_PASSWORD")
 
 	return config
 }
@@ -107,6 +118,11 @@ func handleError(err error) {
 func main() {
 	config := NewConfigFromEnv()
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     config.Redis.Address,
+		Password: config.Redis.Password,
+	})
+
 	db, err := sql.Open(config.Database.Format, config.Database.Url)
 	if err != nil {
 		panic(err)
@@ -116,82 +132,24 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, channel := path.Split(r.URL.Path)
 		if strings.HasPrefix(channel, "#") {
-			channelData := ChannelData{}
-			err = db.QueryRow("SELECT id, channel FROM channels WHERE channel ILIKE $1", channel).Scan(&channelData.Id, &channelData.Name)
-			if err != nil {
-				handleError(err)
-				return
-			}
-			err = db.QueryRow("SELECT COUNT(*), SUM(words), AVG(words), AVG(characters) FROM messages WHERE channel = $1", channelData.Id).Scan(&channelData.Lines, &channelData.Words, &channelData.WordsPerLine, &channelData.CharactersPerLine)
-			if err != nil {
-				handleError(err)
-				return
+			var channelData ChannelData
+			data, err := redisClient.Get(channel).Bytes()
+			if err == nil {
+				err = json.Unmarshal(data, channelData)
 			}
 
-			channelData.Users, err = retrieveUsers(db, channelData.Id)
 			if err != nil {
-				handleError(err)
-				return
-			}
-
-			channelData.Questions, err = retrievePercentageStats(db, channelData.Id, "question")
-			if err != nil {
-				handleError(err)
-				return
-			}
-
-			channelData.Exclamations, err = retrievePercentageStats(db, channelData.Id, "exclamation")
-			if err != nil {
-				handleError(err)
-				return
-			}
-
-			channelData.Caps, err = retrievePercentageStats(db, channelData.Id, "caps")
-			if err != nil {
-				handleError(err)
-				return
-			}
-
-			channelData.EmojiHappy, err = retrievePercentageStats(db, channelData.Id, "emoji_happy")
-			if err != nil {
-				handleError(err)
-				return
-			}
-
-			channelData.EmojiSad, err = retrievePercentageStats(db, channelData.Id, "emoji_sad")
-			if err != nil {
-				handleError(err)
-				return
-			}
-
-			channelData.LongestLines, err = retrieveLongestLines(db, channelData.Id)
-			if err != nil {
-				handleError(err)
-				return
-			}
-
-			channelData.ShortestLines, err = retrieveShortestLines(db, channelData.Id)
-			if err != nil {
-				handleError(err)
-				return
-			}
-
-			channelData.TotalWords, err = retrieveTotalWords(db, channelData.Id)
-			if err != nil {
-				handleError(err)
-				return
-			}
-
-			channelData.References, err = retrieveReferences(db, channelData.Id)
-			if err != nil {
-				handleError(err)
-				return
-			}
-
-			channelData.AverageWords, err = retrieveAverageWords(db, channelData.Id)
-			if err != nil {
-				handleError(err)
-				return
+				channelData, err = buildChannelData(db, channel)
+				if err != nil {
+					handleError(err)
+					return
+				}
+				data, err = json.Marshal(channelData)
+				err = redisClient.Set(channel, data, time.Minute*5).Err()
+				if err != nil {
+					handleError(err)
+					return
+				}
 			}
 
 			err = formatTemplate(w, "statistics", channelData)
@@ -210,6 +168,77 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func buildChannelData(db *sql.DB, channel string) (channelData ChannelData, err error) {
+	fmt.Printf("Recomputing channel data for %s\n", channel)
+
+	err = db.QueryRow("SELECT id, channel FROM channels WHERE channel ILIKE $1", channel).Scan(&channelData.Id, &channelData.Name)
+	if err != nil {
+		return
+	}
+
+	err = db.QueryRow("SELECT COUNT(*), SUM(words), AVG(words), AVG(characters) FROM messages WHERE channel = $1", channelData.Id).Scan(&channelData.Lines, &channelData.Words, &channelData.WordsPerLine, &channelData.CharactersPerLine)
+	if err != nil {
+		return
+	}
+
+	channelData.Users, err = retrieveUsers(db, channelData.Id)
+	if err != nil {
+		return
+	}
+
+	channelData.Questions, err = retrievePercentageStats(db, channelData.Id, "question")
+	if err != nil {
+		return
+	}
+
+	channelData.Exclamations, err = retrievePercentageStats(db, channelData.Id, "exclamation")
+	if err != nil {
+		return
+	}
+
+	channelData.Caps, err = retrievePercentageStats(db, channelData.Id, "caps")
+	if err != nil {
+		return
+	}
+
+	channelData.EmojiHappy, err = retrievePercentageStats(db, channelData.Id, "emoji_happy")
+	if err != nil {
+		return
+	}
+
+	channelData.EmojiSad, err = retrievePercentageStats(db, channelData.Id, "emoji_sad")
+	if err != nil {
+		return
+	}
+
+	channelData.LongestLines, err = retrieveLongestLines(db, channelData.Id)
+	if err != nil {
+		return
+	}
+
+	channelData.ShortestLines, err = retrieveShortestLines(db, channelData.Id)
+	if err != nil {
+		return
+	}
+
+	channelData.TotalWords, err = retrieveTotalWords(db, channelData.Id)
+	if err != nil {
+		return
+	}
+
+	channelData.References, err = retrieveReferences(db, channelData.Id)
+	if err != nil {
+		return
+	}
+
+	channelData.AverageWords, err = retrieveAverageWords(db, channelData.Id)
+	if err != nil {
+		return
+	}
+
+	return
 }
 
 func retrievePercentageStats(db *sql.DB, channel int, stats string) ([]FloatEntry, error) {

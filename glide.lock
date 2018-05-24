@@ -1,8 +1,21 @@
-hash: e3afe7d6be6078ab261a84bcc69e2f87d9805c7553025546d12074b9926fd288
-updated: 2018-05-24T12:12:33.899483528+02:00
+hash: 096846ddf934eee04d5e78003271d70eae05b8167e2611f72d6c34c187689b27
+updated: 2018-05-24T18:48:12.125295149+02:00
 imports:
+- name: github.com/go-redis/redis
+  version: 0f9028adf0837cf93c9705817493e5f6997cf026
 - name: github.com/lib/pq
   version: 90697d60dd844d5ef6ff15135d0203f65d2f53b8
   subpackages:
   - oid
+- name: gopkg.in/bsm/ratelimit.v1
+  version: db14e161995a5177acef654cb0dd785e8ee8bc22
+- name: gopkg.in/redis.v4
+  version: c938162545c57136fa59879746bc65d0f1db3d1e
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/errors
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
 testImports: []
