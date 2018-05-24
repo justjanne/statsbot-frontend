@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const DEBUG = true
+
 type Config struct {
 	Database DatabaseConfig
 }
@@ -45,21 +47,23 @@ func formatTemplate(w http.ResponseWriter, templateName string, data interface{}
 }
 
 type ChannelData struct {
-	Id              int
-	Name            string
-	TotalCharacters int
-	TotalWords      int
-	TotalLines      int
-	Users           []UserData
-	Questions       []FloatEntry
-	Exclamations    []FloatEntry
-	Caps            []FloatEntry
-	EmojiHappy      []FloatEntry
-	EmojiSad        []FloatEntry
-	LongestLines    []FloatEntry
-	ShortestLines   []FloatEntry
-	Total           []IntEntry
-	Average         float64
+	Id                int
+	Name              string
+	Lines             int
+	Words             int
+	WordsPerLine      float64
+	CharactersPerLine float64
+	Users             []UserData
+	Questions         []FloatEntry
+	Exclamations      []FloatEntry
+	Caps              []FloatEntry
+	EmojiHappy        []FloatEntry
+	EmojiSad          []FloatEntry
+	LongestLines      []FloatEntry
+	ShortestLines     []FloatEntry
+	TotalWords        []TotalEntry
+	AverageWords      []FloatEntry
+	References        []ReferenceData
 }
 
 type FloatEntry struct {
@@ -72,12 +76,32 @@ type IntEntry struct {
 	Value int
 }
 
-type UserData struct {
+type TotalEntry struct {
 	Name     string
-	Total    int
-	Words    int
-	Lines    int
-	LastSeen time.Time
+	Value    int
+	Previous string
+}
+
+type UserData struct {
+	Name         string
+	Lines        int
+	Words        int
+	WordsPerLine float64
+	LastSeen     time.Time
+}
+
+type ReferenceData struct {
+	Name     string
+	LastUsed string
+	Count    string
+}
+
+func handleError(err error) {
+	if DEBUG {
+		panic(err)
+	} else {
+		handleError(err)
+	}
 }
 
 func main() {
@@ -95,73 +119,78 @@ func main() {
 			channelData := ChannelData{}
 			err = db.QueryRow("SELECT id, channel FROM channels WHERE channel ILIKE $1", channel).Scan(&channelData.Id, &channelData.Name)
 			if err != nil {
-				println(err.Error())
+				handleError(err)
 				return
 			}
-			err = db.QueryRow("SELECT COUNT(*), SUM(characters), SUM(words) FROM messages WHERE channel = $1", channelData.Id).Scan(&channelData.TotalLines, &channelData.TotalCharacters, &channelData.TotalWords)
+			err = db.QueryRow("SELECT COUNT(*), SUM(words), AVG(words), AVG(characters) FROM messages WHERE channel = $1", channelData.Id).Scan(&channelData.Lines, &channelData.Words, &channelData.WordsPerLine, &channelData.CharactersPerLine)
 			if err != nil {
-				println(err.Error())
-				return
-			}
-			result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.characters, t.words, t.lines, t.lastSeen FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, SUM(messages.characters) as characters, SUM(messages.words) as words, COUNT(*) as lines, MAX(messages.time) AS lastSeen FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = 1 WHERE messages.channel = 1 GROUP BY hash ORDER BY characters DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT 20")
-			if err != nil {
-				println(err.Error())
-				return
-			}
-			for result.Next() {
-				var info UserData
-				err := result.Scan(&info.Name, &info.Total, &info.Words, &info.Lines, &info.LastSeen)
-				if err != nil {
-					panic(err)
-				}
-				channelData.Users = append(channelData.Users, info)
-			}
-
-			channelData.Questions, err = retrievePercentageStats(db, "question")
-			if err != nil {
-				println(err.Error())
+				handleError(err)
 				return
 			}
 
-			channelData.Exclamations, err = retrievePercentageStats(db, "exclamation")
+			channelData.Users, err = retrieveUsers(db, channelData.Id)
 			if err != nil {
-				println(err.Error())
+				handleError(err)
 				return
 			}
 
-			channelData.Caps, err = retrievePercentageStats(db, "caps")
+			channelData.Questions, err = retrievePercentageStats(db, channelData.Id, "question")
 			if err != nil {
-				println(err.Error())
+				handleError(err)
 				return
 			}
 
-			channelData.EmojiHappy, err = retrievePercentageStats(db, "emoji_happy")
+			channelData.Exclamations, err = retrievePercentageStats(db, channelData.Id, "exclamation")
 			if err != nil {
-				println(err.Error())
+				handleError(err)
 				return
 			}
 
-			channelData.EmojiSad, err = retrievePercentageStats(db, "emoji_sad")
+			channelData.Caps, err = retrievePercentageStats(db, channelData.Id, "caps")
 			if err != nil {
-				println(err.Error())
+				handleError(err)
 				return
 			}
 
-			channelData.LongestLines, err = retrieveLongestLines(db)
+			channelData.EmojiHappy, err = retrievePercentageStats(db, channelData.Id, "emoji_happy")
 			if err != nil {
-				println(err.Error())
+				handleError(err)
 				return
 			}
 
-			channelData.ShortestLines, err = retrieveShortestLines(db)
+			channelData.EmojiSad, err = retrievePercentageStats(db, channelData.Id, "emoji_sad")
 			if err != nil {
-				println(err.Error())
+				handleError(err)
+				return
+			}
+
+			channelData.LongestLines, err = retrieveLongestLines(db, channelData.Id)
+			if err != nil {
+				handleError(err)
+				return
+			}
+
+			channelData.ShortestLines, err = retrieveShortestLines(db, channelData.Id)
+			if err != nil {
+				handleError(err)
+				return
+			}
+
+			channelData.TotalWords, err = retrieveTotalWords(db, channelData.Id)
+			if err != nil {
+				handleError(err)
+				return
+			}
+
+			channelData.References, err = retrieveReferences(db, channelData.Id)
+			if err != nil {
+				handleError(err)
 				return
 			}
 
 			err = formatTemplate(w, "statistics", channelData)
 			if err != nil {
-				println(err.Error())
+				handleError(err)
 				return
 			}
 		} else {
@@ -181,12 +210,12 @@ func main() {
 	}
 }
 
-func retrievePercentageStats(db *sql.DB, stats string) ([]FloatEntry, error) {
-	var data []FloatEntry
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t." + stats + " FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, round((count(nullif(messages." + stats + ", false)) * 100) :: numeric / count(*)) as " + stats + " FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = 1 WHERE messages.channel = 1 GROUP BY hash ORDER BY " + stats + " DESC) t LEFT JOIN users ON t.hash = users.hash WHERE t." + stats + " > 0 LIMIT 2;")
+func retrievePercentageStats(db *sql.DB, channel int, stats string) ([]FloatEntry, error) {
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t."+stats+" FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, round((count(nullif(messages."+stats+", false)) * 100) :: numeric / count(*)) as "+stats+" FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY "+stats+" DESC) t LEFT JOIN users ON t.hash = users.hash WHERE t."+stats+" > 0 LIMIT $2;", channel, 2)
 	if err != nil {
 		return nil, err
 	}
+	var data []FloatEntry
 	for result.Next() {
 		var info FloatEntry
 		err := result.Scan(&info.Name, &info.Value)
@@ -198,12 +227,12 @@ func retrievePercentageStats(db *sql.DB, stats string) ([]FloatEntry, error) {
 	return data, nil
 }
 
-func retrieveLongestLines(db *sql.DB) ([]FloatEntry, error) {
-	var data []FloatEntry
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = 1 WHERE messages.channel = 1 GROUP BY hash ORDER BY average DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT 2;")
+func retrieveLongestLines(db *sql.DB, channel int) ([]FloatEntry, error) {
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY average DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2;", channel, 2)
 	if err != nil {
 		return nil, err
 	}
+	var data []FloatEntry
 	for result.Next() {
 		var info FloatEntry
 		err := result.Scan(&info.Name, &info.Value)
@@ -215,15 +244,69 @@ func retrieveLongestLines(db *sql.DB) ([]FloatEntry, error) {
 	return data, nil
 }
 
-func retrieveShortestLines(db *sql.DB) ([]FloatEntry, error) {
-	var data []FloatEntry
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = 1 WHERE messages.channel = 1 GROUP BY hash ORDER BY average DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT 2;")
+func retrieveShortestLines(db *sql.DB, channel int) ([]FloatEntry, error) {
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY average DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2;", channel, 2)
 	if err != nil {
 		return nil, err
 	}
+	var data []FloatEntry
 	for result.Next() {
 		var info FloatEntry
 		err := result.Scan(&info.Name, &info.Value)
+		if err != nil {
+			panic(err)
+		}
+		data = append(data, info)
+	}
+	return data, nil
+}
+
+func retrieveTotalWords(db *sql.DB, channel int) ([]TotalEntry, error) {
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.words FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, SUM(messages.words) as words FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY words DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2", channel, 2)
+	if err != nil {
+		return nil, err
+	}
+	var data []TotalEntry
+	previous := ""
+	for result.Next() {
+		var info TotalEntry
+		err := result.Scan(&info.Name, &info.Value)
+		if err != nil {
+			panic(err)
+		}
+		info.Previous = previous
+		previous = info.Name
+		data = append(data, info)
+	}
+	return data, nil
+}
+
+func retrieveUsers(db *sql.DB, channel int) ([]UserData, error) {
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.lines, t.words, t.wordsPerLine, t.lastSeen FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, COUNT(*) as lines, SUM(messages.words) as words, AVG(messages.words) as wordsPerLine, MAX(messages.time) AS lastSeen FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY lines DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2", channel, 20)
+	if err != nil {
+		return nil, err
+	}
+	var data []UserData
+	for result.Next() {
+		var info UserData
+		err := result.Scan(&info.Name, &info.Lines, &info.Words, &info.WordsPerLine, &info.LastSeen)
+		if err != nil {
+			panic(err)
+		}
+		data = append(data, info)
+	}
+	return data, nil
+}
+
+func retrieveReferences(db *sql.DB, channel int) ([]ReferenceData, error) {
+	result, err := db.Query("SELECT coalesce(u1.nick, '[Unknown]') as target,  t.count,  coalesce(u2.nick, '[Unknown]') AS lastUsed FROM (SELECT coalesce(g1.\"group\", t.target)            AS target,  t.count,  coalesce(g2.\"group\", \"references\".source) AS lastUsed FROM (SELECT \"references\".target AS target,  COUNT(*)            as count,  MAX(id)             AS lastUsed FROM \"references\" WHERE \"references\".channel = $1 GROUP BY target) t JOIN \"references\" ON t.lastUsed = \"references\".id LEFT JOIN groups g1 ON \"references\".source = g1.nick AND g1.channel = $1 LEFT JOIN groups g2 ON t.target = g2.nick AND g2.channel = $1) t LEFT JOIN users u1 ON t.target = u1.hash LEFT JOIN users u2 ON t.lastUsed = u2.hash ORDER BY count DESC LIMIT $2", channel, 5)
+	if err != nil {
+		return nil, err
+	}
+	var data []ReferenceData
+	for result.Next() {
+		var info ReferenceData
+		err := result.Scan(&info.Name, &info.Count, &info.LastUsed)
 		if err != nil {
 			panic(err)
 		}

@@ -20,18 +20,18 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="#FFC107">
 
 <link href="/assets/css/style.css" rel="stylesheet">
-<p>Total: {{.TotalCharacters}} Characters, {{.TotalWords}} Words, {{.TotalLines}} Lines</p>
+<p>Total: {{.Lines}} Lines, {{.Words}} Words, {{printf "%.1f" .WordsPerLine}} Words per Line</p>
 
 <table>
     <thead>
     <tr>
-        <th colspan="3">Most active nicks</th>
+        <th colspan="5">Most active nicks</th>
     </tr>
     <tr>
         <th>Nick</th>
-        <th>Number of Characters</th>
-        <th>Number of Words</th>
         <th>Number of Lines</th>
+        <th>Number of Words</th>
+        <th>Words per Line</th>
         <th>Last seen</th>
     </tr>
     </thead>
@@ -39,9 +39,9 @@
     {{range .Users}}
     <tr>
         <td>{{.Name}}</td>
-        <td>{{.Total}}</td>
-        <td>{{.Words}}</td>
         <td>{{.Lines}}</td>
+        <td>{{.Words}}</td>
+        <td>{{printf "%.1f" .WordsPerLine}}</td>
         <td>{{.LastSeen.Format "2006-01-02"}}</td>
     </tr>
     {{end}}
@@ -131,6 +131,9 @@
     </tr>
     {{end}}
     {{end}}
+    <tr>
+        <td>{{.Name}} average was {{printf "%.1f" .CharactersPerLine}} letters per line.</td>
+    </tr>
     </tbody>
     <tbody>
     {{range $i, $e := .ShortestLines}}
@@ -143,6 +146,55 @@
     {{end}}
     </tr>
     {{end}}
+    {{end}}
+    </tbody>
+    <tbody>
+    {{range $i, $e := .TotalWords}}
+    {{with $e}}
+    <tr>
+    {{if eq $i 0}}
+        <td><b>{{.Name}}</b> spoke a total of {{.Value}} words!</td>
+    {{ else }}
+        <td>{{.Previous}}'s faithful follower, <b>{{.Name}}</b>, didn't speak so much: {{.Value}} words.</td>
+    {{end}}
+    </tr>
+    {{end}}
+    {{end}}
+    </tbody>
+    <tbody>
+    {{range $i, $e := .AverageWords}}
+    {{with $e}}
+    <tr>
+    {{if eq $i 0}}
+        <td><b>{{.Name}}</b> wrote an average of  {{printf "%.1f" .Value}} words per line.</td>
+    {{end}}
+    </tr>
+    {{end}}
+    {{end}}
+    <tr>
+        <td>Channel average was {{printf "%.1f" .WordsPerLine}} words per line.</td>
+    </tr>
+    </tbody>
+</table>
+
+<table>
+    <thead>
+    <tr>
+        <th colspan="3">Most referenced nicks</th>
+    </tr>
+    <tr>
+        <th>Nick</th>
+        <th>Number of Uses</th>
+        <th>Last Used by</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{range .References}}
+    <tr>
+        <td>{{.Name}}</td>
+        <td>{{.Count}}</td>
+        <td>{{.LastUsed}}</td>
+    </tr>
     {{end}}
     </tbody>
 </table>
