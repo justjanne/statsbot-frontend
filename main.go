@@ -60,9 +60,21 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, channel := path.Split(r.URL.Path)
 		channelData := ChannelData{}
-		db.QueryRow("SELECT id, channel FROM channels WHERE channel ILIKE $1", channel).Scan(&channelData.Id, &channelData.Name)
-		db.QueryRow("SELECT SUM(characters), SUM(words) FROM messages WHERE channel = $1").Scan(&channelData.TotalCharacters, &channelData.TotalWords)
-		formatTemplate(w, "statistics", channelData)
+		err = db.QueryRow("SELECT id, channel FROM channels WHERE channel ILIKE $1", channel).Scan(&channelData.Id, &channelData.Name)
+		if err != nil {
+			println(err.Error())
+			return
+		}
+		err = db.QueryRow("SELECT SUM(characters), SUM(words) FROM messages WHERE channel = $1", channelData.Id).Scan(&channelData.TotalCharacters, &channelData.TotalWords)
+		if err != nil {
+			println(err.Error())
+			return
+		}
+		err = formatTemplate(w, "statistics", channelData)
+		if err != nil {
+			println(err.Error())
+			return
+		}
 	})
 
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
