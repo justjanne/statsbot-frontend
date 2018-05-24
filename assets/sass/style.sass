@@ -1,0 +1,29 @@
+*
+  font-family: Verdana, Arial, sans-serif
+
+body
+  display: flex
+  flex-direction: column
+  align-items: center
+
+table
+  max-width: 720px
+  width: 100%
+  border-collapse: collapse
+  th
+    background: rgba(52, 68, 84, 1.0)
+    color: #ffffff
+  tr
+    background: rgba(52, 68, 84, 0.2)
+    font-size: 13px
+    &:nth-child(2n)
+      background: rgba(52, 68, 84, 0.1)
+  &.small-followup
+    tbody
+      background: rgba(52, 68, 84, 0.2)
+      tr
+        background: none
+      tr:not(:first-child)
+        font-size: 10px
+      &:nth-child(2n)
+        background: rgba(52, 68, 84, 0.1)

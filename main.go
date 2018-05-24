@@ -112,7 +112,7 @@ func main() {
 		panic(err)
 	}
 
-	assets := http.FileServer(http.Dir("assets"))
+	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, channel := path.Split(r.URL.Path)
 		if strings.HasPrefix(channel, "#") {
@@ -193,10 +193,6 @@ func main() {
 				handleError(err)
 				return
 			}
-		} else {
-			w.Header().Set("Vary", "Accept-Encoding")
-			w.Header().Set("Cache-Control", "public, max-age=31536000")
-			assets.ServeHTTP(w, r)
 		}
 	})
 
