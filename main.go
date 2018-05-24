@@ -48,6 +48,13 @@ type ChannelData struct {
 	Name            string
 	TotalWords      int
 	TotalCharacters int
+	Users           []UserData
+}
+
+type UserData struct {
+	Name  string
+	Total int
+	Words int
 }
 
 func main() {
@@ -72,6 +79,19 @@ func main() {
 			if err != nil {
 				println(err.Error())
 				return
+			}
+			result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.characters, t.words FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, SUM(messages.characters) as characters, SUM(messages.words) as words FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = 1 WHERE messages.channel = 1 GROUP BY hash ORDER BY characters DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT 20")
+			if err != nil {
+				println(err.Error())
+				return
+			}
+			for result.Next() {
+				var info UserData
+				err := result.Scan(&info.Name, &info.Total, &info.Words)
+				if err != nil {
+					panic(err)
+				}
+				channelData.Users = append(channelData.Users, info)
 			}
 			err = formatTemplate(w, "statistics", channelData)
 			if err != nil {

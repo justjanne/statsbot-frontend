@@ -21,3 +21,13 @@
 
 <link href="/assets/css/style.css" rel="stylesheet">
 <p>Total: {{.TotalCharacters}} Characters, {{.TotalWords}} Words</p>
+
+<table>
+{{range .Users}}
+    <tr>
+        <td>{{.Name}}</td>
+        <td>{{.Total}}</td>
+        <td>{{.Words}}</td>
+    </tr>
+{{end}}
+</table>
