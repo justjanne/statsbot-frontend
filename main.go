@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"github.com/go-redis/redis"
 	_ "github.com/lib/pq"
 	"html/template"
 	"net/http"
@@ -10,8 +12,6 @@ import (
 	"path"
 	"strings"
 	"time"
-	"github.com/go-redis/redis"
-	"encoding/json"
 )
 
 const DEBUG = false
@@ -306,7 +306,7 @@ func retrieveLongestLines(db *sql.DB, channel int) ([]FloatEntry, error) {
 }
 
 func retrieveShortestLines(db *sql.DB, channel int) ([]FloatEntry, error) {
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY average DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2;", channel, 2)
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY average ASC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2;", channel, 2)
 	if err != nil {
 		return nil, err
 	}
