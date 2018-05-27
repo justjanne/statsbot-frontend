@@ -247,7 +247,7 @@ func buildChannelData(db *sql.DB, channel string) (channelData ChannelData, err 
 }
 
 func retrievePercentageStats(db *sql.DB, channel int, stats string) ([]FloatEntry, error) {
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t."+stats+" FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, round((count(nullif(messages."+stats+", false)) * 100) :: numeric / count(*)) as "+stats+" FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY "+stats+" DESC) t LEFT JOIN users ON t.hash = users.hash WHERE t."+stats+" > 0 LIMIT $2;", channel, 2)
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t."+stats+" FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, round((count(nullif(messages."+stats+", false)) * 100) :: numeric / count(*)) as "+stats+" FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash DESC) t LEFT JOIN users ON t.hash = users.hash WHERE t."+stats+" > 0 ORDER BY "+stats+" LIMIT $2;", channel, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +289,7 @@ func retrieveHourUsage(db *sql.DB, channel int) ([]float64, error) {
 }
 
 func retrieveLongestLines(db *sql.DB, channel int) ([]FloatEntry, error) {
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY average DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2;", channel, 2)
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash) t LEFT JOIN users ON t.hash = users.hash ORDER BY average DESC LIMIT $2;", channel, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +306,7 @@ func retrieveLongestLines(db *sql.DB, channel int) ([]FloatEntry, error) {
 }
 
 func retrieveShortestLines(db *sql.DB, channel int) ([]FloatEntry, error) {
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY average ASC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2;", channel, 2)
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.average FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, avg(messages.characters) as average FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash) t LEFT JOIN users ON t.hash = users.hash ORDER BY average ASC LIMIT $2;", channel, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +323,7 @@ func retrieveShortestLines(db *sql.DB, channel int) ([]FloatEntry, error) {
 }
 
 func retrieveTotalWords(db *sql.DB, channel int) ([]TotalEntry, error) {
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.words FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, SUM(messages.words) as words FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY words DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2", channel, 2)
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.words FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, SUM(messages.words) as words FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash) t LEFT JOIN users ON t.hash = users.hash ORDER BY words DESC LIMIT $2", channel, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +343,7 @@ func retrieveTotalWords(db *sql.DB, channel int) ([]TotalEntry, error) {
 }
 
 func retrieveAverageWords(db *sql.DB, channel int) ([]FloatEntry, error) {
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.words FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, AVG(messages.words) as words FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY words DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2", channel, 2)
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.words FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, AVG(messages.words) as words FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash) t LEFT JOIN users ON t.hash = users.hash ORDER BY words DESC LIMIT $2", channel, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +360,7 @@ func retrieveAverageWords(db *sql.DB, channel int) ([]FloatEntry, error) {
 }
 
 func retrieveUsers(db *sql.DB, channel int) ([]UserData, error) {
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.lines, t.words, t.wordsPerLine, t.lastSeen FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, COUNT(*) as lines, SUM(messages.words) as words, AVG(messages.words) as wordsPerLine, MAX(messages.time) AS lastSeen FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash ORDER BY lines DESC) t LEFT JOIN users ON t.hash = users.hash LIMIT $2", channel, 20)
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t.lines, t.words, t.wordsPerLine, t.lastSeen FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, COUNT(*) as lines, SUM(messages.words) as words, AVG(messages.words) as wordsPerLine, MAX(messages.time) AS lastSeen FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash) t LEFT JOIN users ON t.hash = users.hash ORDER BY lines DESC LIMIT $2", channel, 20)
 	if err != nil {
 		return nil, err
 	}
