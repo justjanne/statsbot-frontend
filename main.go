@@ -247,7 +247,7 @@ func buildChannelData(db *sql.DB, channel string) (channelData ChannelData, err 
 }
 
 func retrievePercentageStats(db *sql.DB, channel int, stats string) ([]FloatEntry, error) {
-	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t."+stats+" FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, round((count(nullif(messages."+stats+", false)) * 100) :: numeric / count(*)) as "+stats+" FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash DESC) t LEFT JOIN users ON t.hash = users.hash WHERE t."+stats+" > 0 ORDER BY "+stats+" LIMIT $2;", channel, 2)
+	result, err := db.Query("SELECT coalesce(users.nick, '[Unknown]'), t."+stats+" FROM (SELECT coalesce(groups.\"group\", messages.sender) AS hash, round((count(nullif(messages."+stats+", false)) * 100) :: numeric / count(*)) as "+stats+" FROM messages LEFT JOIN groups ON messages.sender = groups.nick AND groups.channel = $1 WHERE messages.channel = $1 GROUP BY hash) t LEFT JOIN users ON t.hash = users.hash WHERE t."+stats+" > 0 ORDER BY "+stats+" DESC LIMIT $2;", channel, 2)
 	if err != nil {
 		return nil, err
 	}
